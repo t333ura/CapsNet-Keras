@@ -4,7 +4,7 @@ not just on MNIST.
 *NOTE*: some functions can be implemented in multiple ways, I keep all of them. You can try them for yourself just by
 uncommenting them and commenting their counterparts.
 
-Author: Xifeng Guo, E-mail: `guoxifeng1990@163.com`, Github: `https://github.com/XifengGuo/CapsNet-Keras`
+Author: t333ura, Github: `https://github.com/t333ura/CapsNet-Keras` forked from `https://github.com/XifengGuo/CapsNet-Keras`
 """
 
 import keras.backend as K
@@ -174,14 +174,15 @@ class CapsuleLayer(layers.Layer):
         base_config = super(CapsuleLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-
 def PrimaryCap(inputs, dim_capsule, n_channels, kernel_size, strides, padding):
-    """
-    Apply Conv2D `n_channels` times and concatenate all capsules
-    :param inputs: 4D tensor, shape=[None, width, height, channels]
-    :param dim_capsule: the dim of the output vector of capsule
-    :param n_channels: the number of types of capsules
-    :return: output tensor, shape=[None, num_capsule, dim_capsule]
+    """Apply Conv2D `n_channels` times and concatenate all capsules
+
+    Args:
+        inputs: 4D tensor, shape=[None, width, height, channels]
+        dim_capsule: the dim of the output vector of capsule
+        n_channels: the number of types of capsules
+    Returns:
+        output tensor, shape=[None, num_capsule, dim_capsule]
     """
     output = layers.Conv2D(filters=dim_capsule*n_channels, kernel_size=kernel_size, strides=strides, padding=padding,
                            name='primarycap_conv2d')(inputs)

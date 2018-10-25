@@ -13,7 +13,10 @@ Result:
     Validation accuracy > 99.5% after 20 epochs. Converge to 99.66% after 50 epochs.
     About 110 seconds per epoch on a single GTX1070 GPU card
     
-Author: Xifeng Guo, E-mail: `guoxifeng1990@163.com`, Github: `https://github.com/XifengGuo/CapsNet-Keras`
+Author: t333ura, Github: `https://github.com/t333ura/CapsNet-Keras` forked from `https://github.com/XifengGuo/CapsNet-Keras`
+ToDo:
+    mseの修正
+    DigitCapsをベクトルのまま出力
 """
 
 import numpy as np
@@ -29,13 +32,15 @@ K.set_image_data_format('channels_last')
 
 
 def CapsNet(input_shape, n_class, routings):
-    """
-    A Capsule Network on MNIST.
-    :param input_shape: data shape, 3d, [width, height, channels]
-    :param n_class: number of classes
-    :param routings: number of routing iterations
-    :return: Two Keras Models, the first one used for training, and the second one for evaluation.
-            `eval_model` can also be used for training.
+    """A Capsule Network on MNIST.
+
+    Args:
+        input_shape: data shape, 3d, [width, height, channels]
+        n_class: number of classes
+        routings: number of routing iterations
+
+    Returns:
+        Two Keras Models: the first one used for training, and the second one for evaluation. `eval_model` can also be used for training.
     """
     x = layers.Input(shape=input_shape)
 
@@ -46,7 +51,7 @@ def CapsNet(input_shape, n_class, routings):
     primarycaps = PrimaryCap(conv1, dim_capsule=8, n_channels=32, kernel_size=9, strides=2, padding='valid')
 
     # Layer 3: Capsule layer. Routing algorithm works here.
-    digitcaps = CapsuleLayer(num_capsule=n_class, dim_capsule=16, routings=routings,
+    digitcaps = CapsuleLayer(num_capsule=n_class, dim_capsule=16, routings=routings, shared_dim_capsule=8,
                              name='digitcaps')(primarycaps)
 
     # Layer 4: This is an auxiliary layer to replace each capsule with its length. Just to match the true label's shape.
@@ -60,7 +65,7 @@ def CapsNet(input_shape, n_class, routings):
 
     # Shared Decoder model in training and prediction
     decoder = models.Sequential(name='decoder')
-    decoder.add(layers.Dense(512, activation='relu', input_dim=16*n_class))
+    decoder.add(layers.Dense(512, activation='relu', input_dim=n_class*16))
     decoder.add(layers.Dense(1024, activation='relu'))
     decoder.add(layers.Dense(np.prod(input_shape), activation='sigmoid'))
     decoder.add(layers.Reshape(target_shape=input_shape, name='out_recon'))
@@ -73,7 +78,7 @@ def CapsNet(input_shape, n_class, routings):
     noise = layers.Input(shape=(n_class, 16))
     noised_digitcaps = layers.Add()([digitcaps, noise])
     masked_noised_y = Mask()([noised_digitcaps, y])
-    manipulate_model = models.Model([x, y, noise], decoder(masked_noised_y))
+    manipulate_model = models.Model([x, y, noise], decoder(masked_noised_y)) # 入力にxは要らないのでは????
     return train_model, eval_model, manipulate_model
 
 
@@ -167,9 +172,9 @@ def manipulate_latent(model, data, args):
     print('-'*30 + 'Begin: manipulate' + '-'*30)
     x_test, y_test = data
     index = np.argmax(y_test, 1) == args.digit
-    number = np.random.randint(low=0, high=sum(index) - 1)
-    x, y = x_test[index][number], y_test[index][number]
-    x, y = np.expand_dims(x, 0), np.expand_dims(y, 0)
+    number = np.random.choice(sum(index), size=1, replace=False) # 汎用性のため変更
+    x, y = x_test[index][number], y_test[index][number] # numberはndarrayなので次元は減らない
+    # x, y = np.expand_dims(x, 0), np.expand_dims(y, 0) 上の変更により不要
     noise = np.zeros([1, 10, 16])
     x_recons = []
     for dim in range(16):
@@ -182,7 +187,7 @@ def manipulate_latent(model, data, args):
     x_recons = np.concatenate(x_recons)
 
     img = combine_images(x_recons, height=16)
-    image = img*255
+    image = img*255 # ????
     Image.fromarray(image.astype(np.uint8)).save(args.save_dir + '/manipulate-%d.png' % args.digit)
     print('manipulated result saved to %s/manipulate-%d.png' % (args.save_dir, args.digit))
     print('-' * 30 + 'End: manipulate' + '-' * 30)
