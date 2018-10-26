@@ -14,10 +14,15 @@ from keras import initializers, layers
 
 class Length(layers.Layer):
     """
-    Compute the length of vectors. This is used to compute a Tensor that has the same shape with y_true in margin_loss.
+    Compute the length of vectors.
+    This is used to compute a Tensor that has the same shape with y_true in margin_loss.
     Using this layer as model's output can directly predict labels by using `y_pred = np.argmax(model.predict(x), 1)`
-    inputs: shape=[None, num_vectors, dim_vector]
-    output: shape=[None, num_vectors]
+
+    Args:
+        inputs: shape=[None, num_vectors, dim_vector]
+
+    Returns:
+        output: shape=[None, num_vectors]
     """
     def call(self, inputs, **kwargs):
         return K.sqrt(K.sum(K.square(inputs), -1))
@@ -32,9 +37,10 @@ class Length(layers.Layer):
 
 class Mask(layers.Layer):
     """
-    Mask a Tensor with shape=[None, num_capsule, dim_vector] either by the capsule with max length or by an additional 
-    input mask. Except the max-length capsule (or specified capsule), all vectors are masked to zeros. Then flatten the
-    masked Tensor.
+    Mask a Tensor with shape=[None, num_capsule, dim_vector] either by the capsule with max length or by an additional input mask.
+    Except the max-length capsule (or specified capsule), all vectors are masked to zeros.
+    Then flatten the masked Tensor.
+
     For example:
         ```
         x = keras.layers.Input(shape=[8, 3, 2])  # batch_size=8, each sample contains 3 capsules with dim_vector=2
@@ -75,9 +81,12 @@ class Mask(layers.Layer):
 def squash(vectors, axis=-1):
     """
     The non-linear activation used in Capsule. It drives the length of a large vector to near 1 and small vector to 0
-    :param vectors: some vectors to be squashed, N-dim tensor
-    :param axis: the axis to squash
-    :return: a Tensor with same shape as input vectors
+
+    Args:
+        vectors: some vectors to be squashed, N-dim tensor
+        axis: the axis to squash
+    Returns:
+        a Tensor with same shape as input vectors
     """
     s_squared_norm = K.sum(K.square(vectors), axis, keepdims=True)
     scale = s_squared_norm / (1 + s_squared_norm) / K.sqrt(s_squared_norm + K.epsilon())
@@ -175,7 +184,8 @@ class CapsuleLayer(layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 def PrimaryCap(inputs, dim_capsule, n_channels, kernel_size, strides, padding):
-    """Apply Conv2D `n_channels` times and concatenate all capsules
+    """
+    Apply Conv2D `n_channels` times and concatenate all capsules
 
     Args:
         inputs: 4D tensor, shape=[None, width, height, channels]

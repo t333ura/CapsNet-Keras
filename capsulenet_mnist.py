@@ -32,7 +32,8 @@ K.set_image_data_format('channels_last')
 
 
 def CapsNet(input_shape, n_class, routings):
-    """A Capsule Network on MNIST.
+    """
+    A Capsule Network on MNIST.
 
     Args:
         input_shape: data shape, 3d, [width, height, channels]
@@ -51,7 +52,7 @@ def CapsNet(input_shape, n_class, routings):
     primarycaps = PrimaryCap(conv1, dim_capsule=8, n_channels=32, kernel_size=9, strides=2, padding='valid')
 
     # Layer 3: Capsule layer. Routing algorithm works here.
-    digitcaps = CapsuleLayer(num_capsule=n_class, dim_capsule=16, routings=routings, shared_dim_capsule=8,
+    digitcaps = CapsuleLayer(num_capsule=n_class, dim_capsule=16, routings=routings,
                              name='digitcaps')(primarycaps)
 
     # Layer 4: This is an auxiliary layer to replace each capsule with its length. Just to match the true label's shape.
@@ -78,16 +79,20 @@ def CapsNet(input_shape, n_class, routings):
     noise = layers.Input(shape=(n_class, 16))
     noised_digitcaps = layers.Add()([digitcaps, noise])
     masked_noised_y = Mask()([noised_digitcaps, y])
-    manipulate_model = models.Model([x, y, noise], decoder(masked_noised_y)) # 入力にxは要らないのでは????
+    manipulate_model = models.Model([x, y, noise], decoder(masked_noised_y))
     return train_model, eval_model, manipulate_model
 
 
 def margin_loss(y_true, y_pred):
     """
     Margin loss for Eq.(4). When y_true[i, :] contains not just one `1`, this loss should work too. Not test it.
-    :param y_true: [None, n_classes]
-    :param y_pred: [None, num_capsule]
-    :return: a scalar loss value.
+
+    Args:
+        y_true: [None, n_classes]
+        y_pred: [None, num_capsule]
+
+    Returns
+        a scalar loss value.
     """
     L = y_true * K.square(K.maximum(0., 0.9 - y_pred)) + \
         0.5 * (1 - y_true) * K.square(K.maximum(0., y_pred - 0.1))
@@ -98,10 +103,14 @@ def margin_loss(y_true, y_pred):
 def train(model, data, args):
     """
     Training a CapsuleNet
-    :param model: the CapsuleNet model
-    :param data: a tuple containing training and testing data, like `((x_train, y_train), (x_test, y_test))`
-    :param args: arguments
-    :return: The trained model
+
+    Args:
+        model: the CapsuleNet model
+        data: a tuple containing training and testing data, like `((x_train, y_train), (x_test, y_test))`
+        args: arguments
+
+    Returns:
+        The trained model
     """
     # unpacking the data
     (x_train, y_train), (x_test, y_test) = data
@@ -242,6 +251,7 @@ if __name__ == "__main__":
 
     # load data
     (x_train, y_train), (x_test, y_test) = load_mnist()
+
 
     # define model
     model, eval_model, manipulate_model = CapsNet(input_shape=x_train.shape[1:],
