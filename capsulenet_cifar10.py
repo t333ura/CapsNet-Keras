@@ -117,7 +117,7 @@ def train(model, data, args):
     (x_train, y_train), (x_test, y_test) = data
 
     # callbacks
-    log = callbacks.CSVLogger(args.save_dir + '/log.csv')
+    log = callbacks.CSVLogger(args.save_dir + '/log.csv', separator=',', append=True)
     tb = callbacks.TensorBoard(log_dir=args.save_dir + '/tensorboard-logs',
                                batch_size=args.batch_size, histogram_freq=int(args.debug))
     checkpoint = callbacks.ModelCheckpoint(args.save_dir + '/weights-{epoch:02d}.h5', monitor='val_capsnet_acc',
@@ -148,6 +148,7 @@ def train(model, data, args):
     # Training with data augmentation. If shift_fraction=0., also no augmentation.
     model.fit_generator(generator=train_generator(x_train, y_train, args.batch_size, args.shift_fraction),
                         steps_per_epoch=int(y_train.shape[0] / args.batch_size),
+                        initial_epoch=args.initial_epoch,
                         epochs=args.epochs,
                         validation_data=[[x_test, y_test], [y_test, x_test]],
                         callbacks=[log, tb, checkpoint, lr_decay])
@@ -223,25 +224,25 @@ def load_cifar10():
 
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
-    def read_image(image, labels):
+    def read_image(image, label):
 
         patches = extract_patches_2d(image, (ROWS, COLS), max_patches=10)
-        lab = np.full(10, labels, dtype=int)
+        labels = np.full(10, label, dtype=int)
 
-        return patches, lab
+        return patches, labels
 
-    def prep_data(images, label):
+    def prep_data(images, labels):
         num_images = images.shape[0]
-        data = []
-        labels = []
+        preped_images = []
+        preped_labels = []
         for i in range(num_images):
-            x_train, y_train = read_image(images[i, :, :, :], label[i])
+            x_train, y_train = read_image(images[i, :, :, :], labels[i])
 
-            data.extend(x_train)
-            labels.extend(y_train)
+            preped_images.extend(x_train)
+            preped_labels.extend(y_train)
             if i % 250 == 0: print('Processed {} of {}'.format(i, num_images))
 
-        return np.array(data), np.array(labels)
+        return np.array(preped_images), np.array(preped_labels)
 
     x_train = x_train.astype('float32') / 255.
     x_test = x_test.astype('float32') / 255.
@@ -249,8 +250,8 @@ def load_cifar10():
     x_train, y_train = prep_data(x_train, y_train)
     x_test, y_test = prep_data(x_test, y_test)
 
-    y_train = to_categorical(y_train.astype('float32'))
-    y_test = to_categorical(y_test.astype('float32'))
+    y_train = to_categorical(y_train.astype('float32'), num_classes=int(np.max(y_train, axis=0)+1)+1)
+    y_test = to_categorical(y_test.astype('float32'), num_classes=int(np.max(y_test, axis=0)+1)+1)
     print('x_train shape:', x_train.shape)
     print(x_train.shape[0], 'train samples')
     print(x_test.shape[0], 'test samples')
@@ -264,6 +265,7 @@ if __name__ == "__main__":
 
     # setting the hyper parameters
     parser = argparse.ArgumentParser(description="Capsule Network on MNIST.")
+    parser.add_argument('--initial_epoch', default=0, type=int)
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--lr', default=0.001, type=float,
@@ -288,18 +290,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
+    args.save_dir = args.save_dir + '/epoch{:02d}-{:02d}'.format(args.initial_epoch+1, args.epochs)
+
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
-
-    # load MNIST
-    # (x_train, y_train), (x_test, y_test) = load_mnist()
 
     # load CIFAR10
     (x_train, y_train), (x_test, y_test) = load_cifar10()
 
     # define model
     model, eval_model, manipulate_model = CapsNet(input_shape=x_train.shape[1:],
-                                                  n_class=len(np.unique(np.argmax(y_train, 1))),
+                                                  n_class=len(np.unique(np.argmax(y_train, 1)))+1,
                                                   routings=args.routings)
     model.summary()
 
