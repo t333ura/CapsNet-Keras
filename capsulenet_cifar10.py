@@ -169,7 +169,7 @@ def test(model, data, args):
     print('-'*30 + 'Begin: test' + '-'*30)
     print('Test acc:', np.sum(np.argmax(y_pred, 1) == np.argmax(y_test, 1))/y_test.shape[0])
 
-    img = combine_images(np.concatenate([x_test[:50],x_recon[:50]]))
+    img = combine_images(np.concatenate([x_test[::10][:50],x_recon[::10][:50]]))
     image = img * 255
     Image.fromarray(image.astype(np.uint8)).save(args.save_dir + "/real_and_recon.png")
     print()
@@ -186,7 +186,7 @@ def manipulate_latent(model, data, args):
     number = np.random.choice(sum(index), size=1, replace=False) # 汎用性のため変更
     x, y = x_test[index][number], y_test[index][number] # numberはndarrayなので次元は減らない
     # x, y = np.expand_dims(x, 0), np.expand_dims(y, 0) 上の変更により不要
-    noise = np.zeros([1, 10, 16])
+    noise = np.zeros([1, 11, 16])
     x_recons = []
     for dim in range(16):
         for r in [-0.25, -0.2, -0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.15, 0.2, 0.25]:
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    args.save_dir = args.save_dir + '/epoch{:02d}-{:02d}'.format(args.initial_epoch+1, args.epochs)
+    # args.save_dir = args.save_dir + '/epoch{:02d}-{:02d}'.format(args.initial_epoch+1, args.epochs)
 
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
@@ -312,5 +312,10 @@ if __name__ == "__main__":
     else:  # as long as weights are given, will run testing
         if args.weights is None:
             print('No weights are provided. Will test using random initialized weights.')
-        manipulate_latent(manipulate_model, (x_test, y_test), args)
+        if args.digit == 10:
+            for i in range(10):
+                args.digit = i
+                manipulate_latent(manipulate_model, (x_test, y_test), args)
+        else:
+            manipulate_latent(manipulate_model, (x_test, y_test), args)
         test(model=eval_model, data=(x_test, y_test), args=args)
