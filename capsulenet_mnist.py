@@ -248,6 +248,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
+    args.save_dir = args.save_dir + '/epoch{:02d}-{:02d}'.format(args.initial_epoch, args.epochs-1)
+
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
 
