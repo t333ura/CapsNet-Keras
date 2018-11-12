@@ -155,7 +155,7 @@ class CapsuleLayer(layers.Layer):
 
             # 最後的に小さいcは0にする
             if i == self.routings:
-                tf.where(c >= 0.5, c, Ktfzeros(shape=K.shape(c))
+                tf.where(c >= 0.5, c, tf.zeros(shape=K.shape(c)))
 
             # c.shape =  [batch_size, num_capsule, input_num_capsule]
             # inputs_hat.shape=[None, num_capsule, input_num_capsule, dim_capsule]
